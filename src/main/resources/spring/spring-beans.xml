@@ -1,0 +1,61 @@
+<beans xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns="http://www.springframework.org/schema/beans" xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
+		http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+	<!--START configuration for custom objectMapper for jackson custom serializer -->
+	<mvc:annotation-driven>
+		<mvc:message-converters>
+			<bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+				<property name="objectMapper" ref="jacksonObjectMapper" />
+			</bean>
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+	<bean id="jacksonObjectMapper" class="org.speedyfs.transformer.CustomObjectMapper" />
+	<!--END configuration for custom objectMapper for jackson custom serializer -->
+	<!--START configuration for spring scheduler for using @scheduler annotation in the code -->
+	<task:annotation-driven executor="executor" />
+	<task:scheduler id="scheduler" pool-size="1" />
+	<task:executor id="executor" pool-size="1" />
+	<!--END configuration for spring scheduler for using @scheduler annotation in the code -->
+	<!--START configuration to use spring AOP -->
+	<aop:aspectj-autoproxy />
+	<!-- Aspect -->
+	<bean id="albumLogAspect" class="org.speedyfs.aop.CommonAspect" />
+	<!--END configuration to use spring AOP -->
+	<!-- base package where spring framework will search all the components annotated with any @Component or its child annotations -->
+	<context:component-scan base-package="org.speedyfs" />
+	<!--configuration to use multipart request in spring rest controller -->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+	<!-- one of the properties available; the maximum file size in bytes (1073741824 B = 1 GB) -->
+		<property name="maxUploadSize" value="10737418240" />
+		<property name="maxInMemorySize" value="1073741824" />
+	</bean>
+	<!--configuration to return the json in response for any request coming to the server -->
+	<bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="defaultContentType" value="application/json" />
+	</bean>
+	<!--configuration to implement I18N in spring web application to resolve messages of diffrent locales -->
+	<bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basename" value="classpath:messages/messages" />
+		<property name="defaultEncoding" value="UTF-8" />
+	</bean>
+	<!--configuration to use Spring inbuilt task executor instead of using the executor framework -->
+	<bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+		<property name="corePoolSize" value="100" />
+		<property name="maxPoolSize" value="1000" />
+		<property name="queueCapacity" value="100000" />
+	</bean>
+	<!-- Interceptor Mapping to intercept all the requests coming on the configured path excluding the excluded paths -->
+	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**" />
+			<mvc:exclude-mapping path="/devices/**" />			
+			<bean class="org.speedyfs.controller.AuthInterceptor" />
+		</mvc:interceptor>
+	</mvc:interceptors>
+</beans>
